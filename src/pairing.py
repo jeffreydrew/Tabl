@@ -45,6 +45,17 @@ def initialPairings(teams):
 
     return pairings
 
+def round2Pairings(pairings):
+    pass
+
+def round3Pairings(pairings):
+    pass
+
+def round4Pairings(pairings):
+    pass
+
+def round4Pairings_Nats(pairings):
+    pass
 
 def printPairings(pairings):
     for i, pairing in enumerate(pairings):
