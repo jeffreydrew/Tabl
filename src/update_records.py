@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import math
+import random
+from pairing import *
 
 # ------------------------------------------------------------------------------------------------
 #                                       Global Variables
@@ -120,7 +122,58 @@ def read_ballot(path):
         return "0000", 0
 
 
-print(read_ballot("ballots/ballot1.csv"))
+def generate_random_ballot(number_of_ballots=1):
+    # ***will generate a ballot with random scores and random team numbers
+    teams = read_teams()
+    team1 = random.choice(teams)
+    team2 = random.choice(teams)
+    while team2 == team1:
+        team2 = random.choice(teams)
+    # generate 11 tuples of random scores between 5 and 10
+    scores = []
+    for i in range(11):
+        scores.append((random.randint(5, 10), random.randint(5, 10)))
+    # write to file
+    with open("ballots/ballot.csv", "w") as f:
+        # write teams
+        f.write(team1 + "," + team2 + "\n")
+        # write scores
+        for score in scores:
+            f.write(str(score[0]) + "," + str(score[1]) + "\n")
+
+
+def generate_ballot(teams, path):
+    # ***will generate a ballot with random scores and given team numbers
+    team1 = teams[0]
+    team2 = teams[1]
+    # generate 11 tuples of random scores between 5 and 10
+    scores = []
+    for i in range(11):
+        scores.append((random.randint(5, 10), random.randint(5, 10)))
+    # write to file
+    filename = path + '/' + team1 + "_" + team2 + ".csv"
+    with open(filename, "w") as f:
+        # write teams
+        f.write(teams[0] + "," + teams[1] + "\n")
+        # write scores
+        for score in scores:
+            f.write(str(score[0]) + "," + str(score[1]) + "\n")
+
+
+def generate_round_ballots(round_number):
+    # create folder for round
+    folder = "round" + str(round_number)
+    path = "ballots/" + folder
+    if not os.path.exists(path):
+        os.makedirs(path)
+    # uses round 1 random pairing to generate ballots
+    teams = read_teams()
+    pairings = round_1_Pairings(teams)
+    for pairing in pairings:
+        generate_ballot(pairing, path)
+
+
+generate_round_ballots(1)
 
 
 def update_team_records():

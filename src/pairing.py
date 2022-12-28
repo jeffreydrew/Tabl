@@ -1,20 +1,7 @@
 import random
 
-teams = [
-    "1100",
-    "1200",
-    "1300",
-    "1301",
-    "1400",
-    "1500",
-    "1600",
-    "1700",
-    "1800",
-    "1900",
-]
 
-
-def initialPairings(teams):
+def round_1_Pairings(teams):
 
     random.shuffle(teams)
     pairings = []  # list of tuples (team1, team2)
@@ -45,22 +32,19 @@ def initialPairings(teams):
 
     return pairings
 
-def round2Pairings(pairings):
+def round_2_Pairings(pairings):
     pass
 
-def round3Pairings(pairings):
+def round_3_Pairings(pairings):
     pass
 
-def round4Pairings(pairings):
+def round_4_Pairings(pairings):
     pass
 
-def round4Pairings_Nats(pairings):
+def round_4_Pairings_Nats(pairings):
     pass
 
-def printPairings(pairings):
+def print_Pairings(pairings):
     for i, pairing in enumerate(pairings):
         print(f"Room {i+1}: {pairing[0]} vs {pairing[1]}")
 
-
-round1 = initialPairings(teams)
-printPairings(round1)
