@@ -151,7 +151,7 @@ def generate_ballot(teams, path):
     for i in range(11):
         scores.append((random.randint(5, 10), random.randint(5, 10)))
     # write to file
-    filename = path + '/' + team1 + "_" + team2 + ".csv"
+    filename = path + "/" + team1 + "_" + team2 + ".csv"
     with open(filename, "w") as f:
         # write teams
         f.write(teams[0] + "," + teams[1] + "\n")
@@ -166,6 +166,11 @@ def generate_round_ballots(round_number):
     path = "ballots/" + folder
     if not os.path.exists(path):
         os.makedirs(path)
+
+    # delete everything inside the folder
+    for filename in os.listdir(path):
+        os.remove(path + "/" + filename)
+
     # uses round 1 random pairing to generate ballots
     teams = read_teams()
     pairings = round_1_Pairings(teams)
