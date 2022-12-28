@@ -21,7 +21,7 @@ def test_create_teams_table():
     # create teams table
     create_teams_table()
     # assert that table has been created
-    assert os.path.exists('databases/team_records.db')
+    assert os.path.exists(test_path)
     # assert that there are 8 rows in the table
     assert len(get_records()) == 8
     # assert that the values in the table are correct

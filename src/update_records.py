@@ -1,12 +1,19 @@
 import sqlite3
+import os
+
+# ------------------------------------------------------------------------------------------------
+#                                       Global Variables
+# ------------------------------------------------------------------------------------------------
 
 PATH_DB = "databases/team_records.db"
 PATH_TEAMS = "src/teams.csv"
+
 
 def read_teams(path=PATH_TEAMS):
     with open(path, "r") as f:
         teams = f.read().splitlines()
     return teams
+
 
 def create_teams_table(path=PATH_DB):
     conn = sqlite3.connect(path)
@@ -17,9 +24,7 @@ def create_teams_table(path=PATH_DB):
     )
     teams = read_teams()
     for team in teams:
-        cursor.execute(
-            """INSERT INTO team_records VALUES (?, 0, 0)""", (team,)
-        )
+        cursor.execute("""INSERT INTO team_records VALUES (?, 0, 0)""", (team,))
     conn.commit()
     conn.close()
 
@@ -65,8 +70,8 @@ def update_records(team_number, win_loss):
     conn.close()
 
 
-def clear_table():
-    conn = sqlite3.connect("databases/team_records.db")
+def clear_table(path=PATH_DB):
+    conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute("""DELETE FROM team_records""")
     conn.commit()
@@ -80,3 +85,33 @@ def get_records(path=PATH_DB):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+# ------------------------------------------------------------------------------------------------
+#                                       Ballot Stuff
+# ------------------------------------------------------------------------------------------------
+
+
+def read_ballot(path):
+    with open(path, "r") as f:
+        ballot = f.read().splitlines()
+    return ballot
+
+
+def update_team_records():
+    # files = []
+    # for root, dirs, files in os.walk("ballots"):
+    #     files.append(files)
+    # return files[:-1]
+    #***will read through all ballots and update the database after clearing it
+    for root, dirs, files in os.walk("ballots"):
+        ballot = read_ballot(os.path.join(root, files[0]))
+        p_total = 0
+        d_total = 0
+        for p,d in ballot:
+            p_total += int(p)
+            d_total += int(d)
+        if p_total > d_total:
+            
+
+print(update_team_records())
