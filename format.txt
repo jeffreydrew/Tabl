@@ -1,0 +1,18 @@
+teams database
+primary key: team_id
+prev_side, wins, loss, CS, PD, 
+
+
+
+
+Logistics:
+round 4 pairings for orcs and regionals
+secondary bracket is teams with 2.5 wins more than first out and teams with 2 wins less than first out (best and worst teams)
+first out is (num of bids + 1) ranked team, and how many wins they have
+if uneven brackets:
+    caveat:
+        team is within 1 ballot of first in record
+    1. bring down lowest ranked team from bracket 1 to bracket 2
+    check if this breaks caveat
+    else:
+        bring up highest ranked team from bracket 2 to bracket 1
