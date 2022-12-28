@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import math
 
 # ------------------------------------------------------------------------------------------------
 #                                       Global Variables
@@ -93,9 +94,33 @@ def get_records(path=PATH_DB):
 
 
 def read_ballot(path):
+    # return winning team, point differential
+    # open path and read
     with open(path, "r") as f:
         ballot = f.read().splitlines()
-    return ballot
+    # store first line as teams tuple
+    teams = ballot[0].split(",")
+    # store rest of lines as scores list of tuples
+    scores = []
+    for line in ballot[1:]:
+        scores.append(line.split(","))
+    p_total = 0
+    d_total = 0
+    for score in scores:
+        p_total += int(score[0])
+        d_total += int(score[1])
+    # calculate point differential
+    pd = abs(p_total - d_total)
+    # return winning team and point differential
+    if p_total > d_total:
+        return teams[0], pd
+    elif d_total > p_total:
+        return teams[1], pd
+    else:
+        return "0000", 0
+
+
+print(read_ballot("ballots/ballot1.csv"))
 
 
 def update_team_records():
@@ -103,15 +128,6 @@ def update_team_records():
     # for root, dirs, files in os.walk("ballots"):
     #     files.append(files)
     # return files[:-1]
-    #***will read through all ballots and update the database after clearing it
+    # ***will read through all ballots and update the database after clearing it
     for root, dirs, files in os.walk("ballots"):
         ballot = read_ballot(os.path.join(root, files[0]))
-        p_total = 0
-        d_total = 0
-        for p,d in ballot:
-            p_total += int(p)
-            d_total += int(d)
-        if p_total > d_total:
-            
-
-print(update_team_records())

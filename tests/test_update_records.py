@@ -63,3 +63,9 @@ def test_clear_table():
     assert len(get_records()) == 0
     # assert that the values in the table are correct
     assert get_records() == []
+
+
+def test_read_ballot():
+    winner, pd = read_ballot("ballots/ballot1.csv")
+    assert winner == "1100"
+    assert pd == 1
