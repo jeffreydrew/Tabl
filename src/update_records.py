@@ -1,7 +1,30 @@
 import sqlite3
 
+PATH_DB = "databases/team_records.db"
+PATH_TEAMS = "src/teams.csv"
 
-def create_table(path="databases/team_records.db"):
+def read_teams(path=PATH_TEAMS):
+    with open(path, "r") as f:
+        teams = f.read().splitlines()
+    return teams
+
+def create_teams_table(path=PATH_DB):
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS team_records
+                    (team_number text, wins integer, losses integer)"""
+    )
+    teams = read_teams()
+    for team in teams:
+        cursor.execute(
+            """INSERT INTO team_records VALUES (?, 0, 0)""", (team,)
+        )
+    conn.commit()
+    conn.close()
+
+
+def create_empty_table(path="databases/team_records.db"):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute(
@@ -50,8 +73,8 @@ def clear_table():
     conn.close()
 
 
-def get_records():
-    conn = sqlite3.connect("databases/team_records.db")
+def get_records(path=PATH_DB):
+    conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute("""SELECT * FROM team_records""")
     rows = cursor.fetchall()
