@@ -1,6 +1,5 @@
 import sqlite3
 import os
-import math
 import random
 from pairing import *
 
@@ -9,12 +8,21 @@ from pairing import *
 # ------------------------------------------------------------------------------------------------
 
 PATH_DB = "databases/team_records.db"
-PATH_TEAMS = "src/teams.csv"
+PATH_TEAMS = "teams.csv"
+
+
+# ------------------------------------------------------------------------------------------------
+#                                 Set the database with info
+# ------------------------------------------------------------------------------------------------
 
 
 def read_teams(path=PATH_TEAMS):
+    # open path, read and return a list of tuples (team number, team name) delimited by comma
     with open(path, "r") as f:
-        teams = f.read().splitlines()
+        read = f.read().splitlines()
+    teams = []
+    for line in read:
+        teams.append(line.split(", "))
     return teams
 
 
@@ -23,16 +31,39 @@ def create_teams_table(path=PATH_DB):
     cursor = conn.cursor()
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS team_records
-                    (team_number text, wins integer, losses integer)"""
+                    (team_number text, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text)"""
     )
+
+
+    #fill id and name
     teams = read_teams()
-    for team in teams:
-        cursor.execute("""INSERT INTO team_records VALUES (?, 0, 0)""", (team,))
+    for id, name in teams:
+        cursor.execute("""INSERT INTO team_records VALUES (?, ?, 0, 0)""", (id,), (name,))
     conn.commit()
     conn.close()
 
+# database will look like this
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | team_number | team_name            | Wins | Losses | CS | OCS | PD | R1 | R2 | R3 | R4 |
+# +=============+======================+======+========+====+=====+====+====+====+====+====+
+# | 1100        | David University     | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1200        | Jack University      | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1300        | Aastha University A  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1301        | Aastha University B  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1400        | Sjoberg University A | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1401        | Sjoberg University B | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1500        | Nathan University    | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+# | 1600        | Mia University       | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
+# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
 
-def create_empty_table(path="databases/team_records.db"):
+def create_empty_table(path=PATH_DB):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute(
@@ -148,7 +179,7 @@ def generate_ballot(teams, path):
     team2 = teams[1]
     # generate 11 tuples of random scores between 5 and 10
     scores = []
-    for i in range(11):
+    for i in range(14):
         scores.append((random.randint(5, 10), random.randint(5, 10)))
     # write to file
     filename = path + "/" + team1 + "_" + team2 + ".csv"
@@ -176,9 +207,6 @@ def generate_round_ballots(round_number):
     pairings = round_1_Pairings(teams)
     for pairing in pairings:
         generate_ballot(pairing, path)
-
-
-generate_round_ballots(1)
 
 
 def update_team_records():
