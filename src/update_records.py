@@ -4,7 +4,7 @@ import random
 from pairing import *
 
 # ------------------------------------------------------------------------------------------------
-#                                       Global Variables
+#                                       Real Path Variables
 # ------------------------------------------------------------------------------------------------
 
 PATH_DB = "databases/team_records.db"
@@ -12,7 +12,7 @@ PATH_TEAMS = "teams.csv"
 
 
 # ------------------------------------------------------------------------------------------------
-#                                 Set the database with info
+#                                     Set the database with info
 # ------------------------------------------------------------------------------------------------
 
 
@@ -106,6 +106,11 @@ def get_records(path=PATH_DB):
     conn.close()
     return rows
 
+def print_table(path=PATH_DB):
+    rows = get_records(path)
+    for row in rows:
+        print(row)    
+
 
 def read_ballot(path):
     # return winning team, point differential
@@ -186,8 +191,28 @@ def update_records(path=PATH_DB):
             )
             row = cursor.fetchone()
             cursor.execute(
-                """UPDATE team_records SET wins = ? WHERE team_number = ?""",
+                """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
                 (row[2] + 0.5, winning_team),
+            )
+            # add 0.5 to winning teams record at row[3]
+            cursor.execute(
+                """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
+            )
+            row = cursor.fetchone()
+            cursor.execute(
+                """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
+                (row[3] + 0.5, winning_team),
+            )
+
+            
+            # add 0.5 to losing teams record at row[2]
+            cursor.execute(
+                """SELECT * FROM team_records WHERE team_number = ?""", (losing_team,)
+            )
+            row = cursor.fetchone()
+            cursor.execute(
+                """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
+                (row[2] + 0.5, losing_team),
             )
             # add 0.5 to losing teams record at row[3]
             cursor.execute(
@@ -195,16 +220,16 @@ def update_records(path=PATH_DB):
             )
             row = cursor.fetchone()
             cursor.execute(
-                """UPDATE team_records SET losses = ? WHERE team_number = ?""",
+                """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
                 (row[3] + 0.5, losing_team),
             )
+
         else:
             # winning team update record then pd
             cursor.execute(
                 """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
             )
             row = cursor.fetchone()
-            print(row)
             cursor.execute(
                 """UPDATE team_records SET wins = ? WHERE team_number = ?""",
                 (row[2] + 1, winning_team),
@@ -231,7 +256,61 @@ def update_records(path=PATH_DB):
     conn.commit()
     conn.close()
 
+def update_cs(path=PATH_DB):
+    # update the cs for each team
+    # connect to database
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    # get all teams
+    cursor.execute("""SELECT * FROM team_records""")
+    rows = cursor.fetchall()
+    # go through each team
+    for row in rows:
+        # calculate cs
+        cs = 0
+        for i in range(7,11):
+            if row[i] != '0':
+                op = row[i]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""", (op,)
+                )
+                op_row = cursor.fetchone()
+                cs += op_row[2]
 
+        # update cs
+        cursor.execute(
+            """UPDATE team_records SET CS = ? WHERE team_number = ?""", (cs, row[0])
+        )
+    conn.commit()
+    conn.close()
+
+def update_ocs(path=PATH_DB):
+    #update ocs for each team
+    # connect to database
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    # get all teams
+    cursor.execute("""SELECT * FROM team_records""")
+    rows = cursor.fetchall()
+    # go through each team
+    for row in rows:
+        # calculate ocs
+        ocs = 0
+        for i in range(7,11):
+            if row[i] != '0':
+                op = row[i]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""", (op,)
+                )
+                op_row = cursor.fetchone()
+                ocs += op_row[4]
+
+        # update ocs
+        cursor.execute(
+            """UPDATE team_records SET ocs = ? WHERE team_number = ?""", (ocs, row[0])
+        )
+    conn.commit()
+    conn.close()
 
 # ------------------------------------------------------------------------------------------------
 #                                       Ballot Stuff
