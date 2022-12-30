@@ -144,6 +144,10 @@ def get_round_updates(ballots_path="ballots/round1"):
 
 
 def update_records(path=PATH_DB):
+    '''
+    Updates the wins, losses, and point differential for each team, as well as the round 1 opponent
+    '''
+
     updates = get_round_updates()
     # connect to database
     conn = sqlite3.connect(path)
