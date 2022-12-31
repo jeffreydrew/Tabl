@@ -5,8 +5,8 @@ P2 - Mia University (1600)
 P3 - Sjoberg University B (1401)
 P4 - Jack Univeristy (1200)
 
-D1 - Nathan University (1500)
-D2 - Aastha University A (1300)
+D1 - Nathan University (1300)
+D2 - Aastha University A (1500)
 D3 - David University (1100)
 D4 - Sjoberg University A (1400)
 
