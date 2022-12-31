@@ -470,7 +470,21 @@ def rank_teams(path=PATH_DB, round_number=2):
     for row in rows:
         condensed_teams.append([row[0], row[2], row[6], row[11]])
 
+    #sort by wins first
     condensed_teams.sort(key=lambda x: x[1], reverse=True)
+
+    #if two teams have same number of wins, sort them by pd
+    for i in range(len(condensed_teams) - 1):
+        if condensed_teams[i][1] == condensed_teams[i + 1][1]:
+            if condensed_teams[i][2] < condensed_teams[i + 1][2]:
+                condensed_teams[i], condensed_teams[i + 1] = condensed_teams[i + 1], condensed_teams[i]
+    
+    #if two teams have same number of wins and pd, sort them by higher team number
+    for i in range(len(condensed_teams) - 1):
+        if condensed_teams[i][1] == condensed_teams[i + 1][1] and condensed_teams[i][2] == condensed_teams[i + 1][2]:
+            if int(condensed_teams[i][0]) < int(condensed_teams[i + 1][0]):
+                condensed_teams[i], condensed_teams[i + 1] = condensed_teams[i + 1], condensed_teams[i]
+
 
     p_teams = []
     d_teams = []
