@@ -1,5 +1,16 @@
 from update_records import *
 
+
+def round(round: int, testing: int = 0):
+    if testing:
+        generate_round_ballots(round)
+    pairings_path = "pairings/round" + str(round) + ".csv"
+    update_opponents(pairings_path, round)
+    update_records(round)
+    update_cs()
+    update_ocs()
+
+
 # ------------------------------------------------------------------------------
 #                                Create Table
 # ------------------------------------------------------------------------------
@@ -12,35 +23,19 @@ create_teams_table()
 #                                   Round 1
 # ------------------------------------------------------------------------------
 
-#generate_round_ballots(1)
-update_opponents("pairings/round1.csv", 1)
-update_records(1)
-update_cs()
-update_ocs()
+round(1)
 # ------------------------------------------------------------------------------
 #                                   Round 2
 # ------------------------------------------------------------------------------
 
-#generate_round_ballots(2)
-update_opponents("pairings/round2.csv", 2)
-update_records(2)
-update_cs()
-update_ocs()
+#round(2)
 # ------------------------------------------------------------------------------
 #                                   Round 3
 # ------------------------------------------------------------------------------
 
-#generate_round_ballots(3)
-update_opponents("pairings/round3.csv", 3)
-update_records(3)
-update_cs()
-update_ocs()
+# round(3)
 # ------------------------------------------------------------------------------
 #                                   Round 4
 # ------------------------------------------------------------------------------
 
-#generate_round_ballots(4)
-update_opponents("pairings/round4.csv", 4)
-update_records(4)
-update_cs()
-update_ocs()
+# round(4)

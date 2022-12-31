@@ -39,14 +39,14 @@ def create_teams_table(path=PATH_DB):
     cursor = conn.cursor()
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS team_records
-                    (team_number text, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text)"""
+                    (team_number text, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text, Side_Needed text)"""
     )
 
     # fill id and name
     teams = read_teams()
     for id, name in teams:
         cursor.execute(
-            """INSERT INTO team_records VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0)""",
+            """INSERT INTO team_records VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)""",
             (id, name),
         )
 
@@ -55,25 +55,27 @@ def create_teams_table(path=PATH_DB):
 
 
 # database will look like this
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | team_number | team_name            | Wins | Losses | CS | OCS | PD | R1 | R2 | R3 | R4 |
-# +=============+======================+======+========+====+=====+====+====+====+====+====+
-# | 1100        | David University     | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1200        | Jack University      | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1300        | Aastha University A  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1301        | Aastha University B  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1400        | Sjoberg University A | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1401        | Sjoberg University B | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1500        | Nathan University    | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
-# | 1600        | Mia University       | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  |
-# +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
+"""
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| team_number | team_name            | Wins | Losses | CS | OCS | PD | R1 | R2 | R3 | R4 | Side_Needed |
++=============+======================+======+========+====+=====+====+====+====+====+====+=============+
+| 1100        | David University     | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1200        | Jack University      | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1300        | Aastha University A  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1301        | Aastha University B  | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1400        | Sjoberg University A | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1401        | Sjoberg University B | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1500        | Nathan University    | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+| 1600        | Mia University       | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
++-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+"""
 
 
 def get_records(path=PATH_DB):
@@ -141,6 +143,11 @@ def get_pairings(path: str):
     return pairings
 
 
+# ------------------------------------------------------------------------------------------------
+#                                       Update Database
+# ------------------------------------------------------------------------------------------------
+
+
 def update_opponents(pairings_path, round_number: int) -> None:
     # connect to database
     conn = sqlite3.connect(PATH_DB)
@@ -167,6 +174,16 @@ def update_opponents(pairings_path, round_number: int) -> None:
                 """UPDATE team_records SET R1 = ? WHERE team_number = ?""",
                 (team1, team2),
             )
+            # set sice needed for team1 as D
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("D", team1),
+            )
+            # set sice needed for team2 as p
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("P", team2),
+            )
 
         elif round_number == 2:
             cursor.execute(
@@ -177,6 +194,16 @@ def update_opponents(pairings_path, round_number: int) -> None:
                 """UPDATE team_records SET R2 = ? WHERE team_number = ?""",
                 (team1, team2),
             )
+            # set both teams' side_needed to N
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("N", team1),
+            )
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("N", team2),
+            )
+
         elif round_number == 3:
             cursor.execute(
                 """UPDATE team_records SET R3 = ? WHERE team_number = ?""",
@@ -185,6 +212,16 @@ def update_opponents(pairings_path, round_number: int) -> None:
             cursor.execute(
                 """UPDATE team_records SET R3 = ? WHERE team_number = ?""",
                 (team1, team2),
+            )
+            # set sice needed for team1 as D
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("D", team1),
+            )
+            # set sice needed for team2 as p
+            cursor.execute(
+                """UPDATE team_records SET Side_Needed = ? WHERE team_number = ?""",
+                ("P", team2),
             )
         elif round_number == 4:
             cursor.execute(
@@ -415,8 +452,41 @@ def generate_round_ballots(round_number):
         generate_ballot(pairing, path)
 
 
+# ------------------------------------------------------------------------------------------------
+#                                       Stuff For Pairings
+# ------------------------------------------------------------------------------------------------
+def rank_teams(path=PATH_DB, round_number=2):
+    """
+    for round 2: rankings are based on wins and pd
+    """
+    rankings = {}
+    rows = get_records()
+
+    condensed_teams = []
+    for row in rows:
+        condensed_teams.append([row[0], row[2], row[6], row[11]])
+
+    condensed_teams.sort(key=lambda x: x[1], reverse=True)
+
+    p_teams = []
+    d_teams = []
+    for team in condensed_teams:
+        if team[3] == "P":
+            p_teams.append(team)
+        else:
+            d_teams.append(team)
+
+    #put p teams into rankings with key 'P' + str(rank)
+    for i in range(len(p_teams)):
+        rankings["P" + str(i + 1)] = p_teams[i][0]
+        rankings["D" + str(i + 1)] = d_teams[i][0]
+
+    return rankings
+
+print(rank_teams())
+
 # ------------------------------------------------------------------------------
-#                             Misc Functions
+#                               Misc/Testing Functions
 # ------------------------------------------------------------------------------
 
 
