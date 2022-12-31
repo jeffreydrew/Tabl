@@ -1,7 +1,9 @@
 import sqlite3
 import os
+import sys
 import random
 from pairing import *
+
 
 # ------------------------------------------------------------------------------------------------
 #                                       Real Path Variables
@@ -9,6 +11,7 @@ from pairing import *
 
 PATH_DB = "databases/team_records.db"
 PATH_TEAMS = "teams.csv"
+PATH_TEST_DB = "tests/test_databases/test_team_records.db"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -86,6 +89,7 @@ def get_records(path=PATH_DB):
     conn.close()
     return rows
 
+print(get_records(PATH_TEST_DB))
 
 def print_table(path=PATH_DB):
     rows = get_records(path)
