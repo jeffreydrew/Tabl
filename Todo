@@ -1,2 +1,1 @@
-update opponent for round 1
-update cs
+in update_records, add ability to change oppenent for given round in corresponding R+round_number column
