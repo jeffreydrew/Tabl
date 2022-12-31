@@ -76,28 +76,6 @@ def create_teams_table(path=PATH_DB):
 # +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+
 
 
-def update_records(team_number, win_loss):
-    conn = sqlite3.connect("databases/team_records.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        """SELECT * FROM team_records WHERE team_number = ?""", (team_number,)
-    )
-    row = cursor.fetchone()
-    if win_loss == "win":
-        cursor.execute(
-            """UPDATE team_records SET wins = ? WHERE team_number = ?""",
-            (row[1] + 1, team_number),
-        )
-    elif win_loss == "loss":
-        cursor.execute(
-            """UPDATE team_records SET losses = ? WHERE team_number = ?""",
-            (row[2] + 1, team_number),
-        )
-
-    conn.commit()
-    conn.close()
-
-
 def get_records(path=PATH_DB):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
@@ -106,10 +84,11 @@ def get_records(path=PATH_DB):
     conn.close()
     return rows
 
+
 def print_table(path=PATH_DB):
     rows = get_records(path)
     for row in rows:
-        print(row)    
+        print(row)
 
 
 def read_ballot(path):
@@ -139,7 +118,10 @@ def read_ballot(path):
         return (teams[0], teams[1], 0)
 
 
-def get_round_updates(ballots_path="ballots/round1"):
+def get_round_updates(round_number: int):
+    ballots_path = "ballots/round" + str(round_number)
+    if not os.path.exists(ballots_path):
+        return
     # go through each ballot and get the updates
     # return a list of tuples (team_number, win_loss)
     updates = []
@@ -148,113 +130,180 @@ def get_round_updates(ballots_path="ballots/round1"):
     return updates
 
 
-def update_records(path=PATH_DB):
-    '''
-    Updates the wins, losses, and point differential for each team, as well as the round 1 opponent
-    '''
+def get_pairings(path: str):
+    with open(path, "r") as f:
+        # store first line as teams tuple
+        read = f.read().splitlines()
+    # store rest of lines as scores list of tuples
+    pairings = []
+    for line in read:
+        pairings.append(line.split(", "))
+    return pairings
 
-    updates = get_round_updates()
+
+def update_opponents(pairings_path, round_number: int) -> None:
+    # connect to database
+    conn = sqlite3.connect(PATH_DB)
+    cursor = conn.cursor()
+
+    # get pairings
+    pairings = get_pairings(pairings_path)
+    print(pairings)
+    """
+    this should be based on the results from the pairings for a given round
+    """
+    for pair in pairings:
+        team1 = pair[0]
+        team2 = pair[1]
+
+        if round_number == 1:
+            # set R1 for team 1 as team 2
+            cursor.execute(
+                """UPDATE team_records SET R1 = ? WHERE team_number = ?""",
+                (team2, team1),
+            )
+            # set R1 for team 2 as team 1
+            cursor.execute(
+                """UPDATE team_records SET R1 = ? WHERE team_number = ?""",
+                (team1, team2),
+            )
+
+        elif round_number == 2:
+            cursor.execute(
+                """UPDATE team_records SET R2 = ? WHERE team_number = ?""",
+                (team2, team1),
+            )
+            cursor.execute(
+                """UPDATE team_records SET R2 = ? WHERE team_number = ?""",
+                (team1, team2),
+            )
+        elif round_number == 3:
+            cursor.execute(
+                """UPDATE team_records SET R3 = ? WHERE team_number = ?""",
+                (team2, team1),
+            )
+            cursor.execute(
+                """UPDATE team_records SET R3 = ? WHERE team_number = ?""",
+                (team1, team2),
+            )
+        elif round_number == 4:
+            cursor.execute(
+                """UPDATE team_records SET R4 = ? WHERE team_number = ?""",
+                (team2, team1),
+            )
+            cursor.execute(
+                """UPDATE team_records SET R4 = ? WHERE team_number = ?""",
+                (team1, team2),
+            )
+
+    conn.commit()
+    conn.close()
+
+
+def update_records(round: int, path: str = PATH_DB) -> None:
+    """
+    this should be called at the conclusion of each round
+    calls functions to:
+    - update win-loss
+    - update pd
+    - update all round opponents
+    """
     # connect to database
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
-    # go through each update
-    for update in updates:
-        # parse info
-        winning_team = update[0]
-        losing_team = update[1]
-        pd = int(update[2])
 
-        #set oppenent for winning team to losing team
-        cursor.execute(
-            """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
-        )
-        row = cursor.fetchone()
-        cursor.execute(
-            """UPDATE team_records SET R1 = ? WHERE team_number = ?""",
-            (losing_team, winning_team),
-        )
-        #set oppenent for losing team to winning team
-        cursor.execute(
-            """SELECT * FROM team_records WHERE team_number = ?""", (losing_team,)
-        )
-        row = cursor.fetchone()
-        cursor.execute(
-            """UPDATE team_records SET R1 = ? WHERE team_number = ?""",
-            (winning_team, losing_team),
-        )
+    # clear columns Wins, Losses, PD
+    cursor.execute("""UPDATE team_records SET Wins = 0, Losses = 0, PD = 0""")
+    conn.commit()
 
-        # update records
-        if pd == 0:
-            #add 0.5 to winning teams record at row[2]
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
-                (row[2] + 0.5, winning_team),
-            )
-            # add 0.5 to winning teams record at row[3]
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
-                (row[3] + 0.5, winning_team),
-            )
+    for i in range(round, 0, -1):
 
-            
-            # add 0.5 to losing teams record at row[2]
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (losing_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
-                (row[2] + 0.5, losing_team),
-            )
-            # add 0.5 to losing teams record at row[3]
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (losing_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
-                (row[3] + 0.5, losing_team),
-            )
+        updates = get_round_updates(i)
+        # go through each update
+        for update in updates:
+            # parse info
+            winning_team = update[0]
+            losing_team = update[1]
+            pd = int(update[2])
 
-        else:
-            # winning team update record then pd
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (winning_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET wins = ? WHERE team_number = ?""",
-                (row[2] + 1, winning_team),
-            )
+            # update records
+            if pd == 0:
+                # add 0.5 to winning teams record at row[2]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (winning_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
+                    (row[2] + 0.5, winning_team),
+                )
+                # add 0.5 to winning teams record at row[3]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (winning_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
+                    (row[3] + 0.5, winning_team),
+                )
 
-            cursor.execute(
-                """UPDATE team_records SET PD = ? WHERE team_number = ?""",
-                (row[6] + pd, winning_team),
-            )
+                # add 0.5 to losing teams record at row[2]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (losing_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET Wins = ? WHERE team_number = ?""",
+                    (row[2] + 0.5, losing_team),
+                )
+                # add 0.5 to losing teams record at row[3]
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (losing_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET Losses = ? WHERE team_number = ?""",
+                    (row[3] + 0.5, losing_team),
+                )
 
-            # losing team update record then pd
-            cursor.execute(
-                """SELECT * FROM team_records WHERE team_number = ?""", (losing_team,)
-            )
-            row = cursor.fetchone()
-            cursor.execute(
-                """UPDATE team_records SET losses = ? WHERE team_number = ?""",
-                (row[3] + 1, losing_team),
-            )
-            cursor.execute(
-                """UPDATE team_records SET PD = ? WHERE team_number = ?""",
-                (row[6] - pd, losing_team),
-            )
+            else:
+                # winning team update record then pd
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (winning_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET wins = ? WHERE team_number = ?""",
+                    (row[2] + 1, winning_team),
+                )
+
+                cursor.execute(
+                    """UPDATE team_records SET PD = ? WHERE team_number = ?""",
+                    (row[6] + pd, winning_team),
+                )
+
+                # losing team update record then pd
+                cursor.execute(
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (losing_team,),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE team_records SET losses = ? WHERE team_number = ?""",
+                    (row[3] + 1, losing_team),
+                )
+                cursor.execute(
+                    """UPDATE team_records SET PD = ? WHERE team_number = ?""",
+                    (row[6] - pd, losing_team),
+                )
     conn.commit()
     conn.close()
+
 
 def update_cs(path=PATH_DB):
     # update the cs for each team
@@ -268,8 +317,8 @@ def update_cs(path=PATH_DB):
     for row in rows:
         # calculate cs
         cs = 0
-        for i in range(7,11):
-            if row[i] != '0':
+        for i in range(7, 11):
+            if row[i] != "0":
                 op = row[i]
                 cursor.execute(
                     """SELECT * FROM team_records WHERE team_number = ?""", (op,)
@@ -284,8 +333,9 @@ def update_cs(path=PATH_DB):
     conn.commit()
     conn.close()
 
+
 def update_ocs(path=PATH_DB):
-    #update ocs for each team
+    # update ocs for each team
     # connect to database
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
@@ -296,8 +346,8 @@ def update_ocs(path=PATH_DB):
     for row in rows:
         # calculate ocs
         ocs = 0
-        for i in range(7,11):
-            if row[i] != '0':
+        for i in range(7, 11):
+            if row[i] != "0":
                 op = row[i]
                 cursor.execute(
                     """SELECT * FROM team_records WHERE team_number = ?""", (op,)
@@ -311,6 +361,7 @@ def update_ocs(path=PATH_DB):
         )
     conn.commit()
     conn.close()
+
 
 # ------------------------------------------------------------------------------------------------
 #                                       Ballot Stuff
@@ -337,7 +388,7 @@ def generate_ballot(teams: list, path: str):
                 f.write(str(score[0]) + "," + str(score[1]) + "\n")
 
 
-def generate_round_ballots(round_number=1):
+def generate_round_ballots(round_number):
     # create folder for round
     folder = "round" + str(round_number)
     path = "ballots/" + folder
@@ -350,7 +401,43 @@ def generate_round_ballots(round_number=1):
 
     # uses round 1 random pairing to generate ballots
     teams = read_teams()
-    pairings = round_1_Pairings(teams)
+    if round_number == 1:
+        pairings = round_1_Pairings(teams)
+    elif round_number == 2:
+        pairings = round_2_Pairings(teams)
+    elif round_number == 3:
+        pairings = round_3_Pairings(teams)
+    elif round_number == 4:
+        pairings = round_4_Pairings(teams)
+
     print(pairings)
     for pairing in pairings:
         generate_ballot(pairing, path)
+
+
+# ------------------------------------------------------------------------------
+#                             Misc Functions
+# ------------------------------------------------------------------------------
+
+
+def check_pd_single_ballot(ballot_path: str) -> None:
+    # check pd for a single ballot
+    # open file
+    with open(ballot_path, "r") as f:
+        # read teams
+        teams = f.readline().split(",")
+        team1 = teams[0]
+        team2 = teams[1]
+        # read scores
+        scores = []
+        for line in f:
+            scores.append(line.split(","))
+        # calculate pd
+        pd = 0
+        for score in scores:
+            pd += int(score[0]) - int(score[1])
+        # print results
+        print(team1 + " pd: " + str(pd))
+
+
+# check_pd_single_ballot('ballots/round1/1100_1301_0.csv')
