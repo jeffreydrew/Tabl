@@ -1,4 +1,5 @@
 import random
+from update_records import rank_teams
 
 
 def round_1_Pairings(teams: list[list[str]]):
@@ -52,11 +53,16 @@ def round_1_Pairings(teams: list[list[str]]):
     return pairings
 
 
-def round_2_Pairings(teams: list[list[str]]):
+def round_2_Pairings():
     pairings = []
-    
+    rankings = rank_teams(2)
+
+    # for i in half the length of the rankings list:
+    for i in range(len(rankings) // 2):
+        pairings.append([rankings["P" + str(i)], rankings["D" + str(i)]])
 
     return pairings
+
 
 def round_3_Pairings(teams: list[list[str]]):
     pairings = []

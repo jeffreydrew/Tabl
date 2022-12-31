@@ -458,7 +458,7 @@ def generate_round_ballots(round_number):
 # ------------------------------------------------------------------------------------------------
 #                                       Stuff For Pairings
 # ------------------------------------------------------------------------------------------------
-def rank_teams(path=PATH_DB, round_number=2):
+def rank_teams(round_number=2):
     """
     for round 2: rankings are based on wins and pd
     """
