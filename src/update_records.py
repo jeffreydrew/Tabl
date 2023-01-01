@@ -511,7 +511,11 @@ def get_winner(path=PATH_DB):
                     condensed_teams[i],
                 )
 
-    return condensed_teams
+    #write the first 6 teams to a file called winners.txt
+    with open("winners.txt", "w") as f:
+        for i in range(6):
+            f.write(str(condensed_teams[i][0]) + "\n")
+            
 
 
 # ------------------------------------------------------------------------------
