@@ -444,15 +444,74 @@ def generate_round_ballots(round_number):
     if round_number == 1:
         pairings = round_1_Pairings(teams)
     elif round_number == 2:
-        pairings = round_2_Pairings(teams)
+        pairings = round_2_Pairings()
     elif round_number == 3:
-        pairings = round_3_Pairings(teams)
+        pairings = round_3_Pairings()
     elif round_number == 4:
-        pairings = round_4_Pairings(teams)
+        pairings = round_4_Pairings_Nats()
 
     print(pairings)
     for pairing in pairings:
         generate_ballot(pairing, path)
+
+
+def get_winner(path=PATH_DB):
+    """
+    uses round ranking algorithm to determine winners of the tournament
+    """
+
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM team_records""")
+    rows = cursor.fetchall()
+
+    condensed_teams = []
+    for row in rows:
+        condensed_teams.append([row[0], row[2], row[4], row[5], row[6], row[11]])
+
+    # sort by wins first
+    condensed_teams.sort(key=lambda x: x[1], reverse=True)
+
+    # if two teams have the same number of wins, sort them by cs
+    for i in range(len(condensed_teams) - 1):
+        if condensed_teams[i][1] == condensed_teams[i + 1][1]:
+            if condensed_teams[i][2] < condensed_teams[i + 1][2]:
+                condensed_teams[i], condensed_teams[i + 1] = (
+                    condensed_teams[i + 1],
+                    condensed_teams[i],
+                )
+            
+    #if two teams have the same cs, sort them by ocs
+    for i in range(len(condensed_teams) - 1):
+        if condensed_teams[i][1] == condensed_teams[i + 1][1] and condensed_teams[i][2] == condensed_teams[i + 1][2]:
+            if condensed_teams[i][3] < condensed_teams[i + 1][3]:
+                condensed_teams[i], condensed_teams[i + 1] = (
+                    condensed_teams[i + 1],
+                    condensed_teams[i],
+                )
+
+    # if two teams have same ocs, sort them by pd
+    for i in range(len(condensed_teams) - 1):
+        if condensed_teams[i][1] == condensed_teams[i + 1][1] and condensed_teams[i][2] == condensed_teams[i + 1][2] and condensed_teams[i][3] == condensed_teams[i + 1][3]:
+            if condensed_teams[i][4] < condensed_teams[i + 1][4]:
+                condensed_teams[i], condensed_teams[i + 1] = (
+                    condensed_teams[i + 1],
+                    condensed_teams[i],
+                )
+
+    # if two teams have same number of wins and pd, sort them by higher team number
+    for i in range(len(condensed_teams) - 1):
+        if (
+            condensed_teams[i][1] == condensed_teams[i + 1][1]
+            and condensed_teams[i][2] == condensed_teams[i + 1][2]
+        ):
+            if int(condensed_teams[i][0]) < int(condensed_teams[i + 1][0]):
+                condensed_teams[i], condensed_teams[i + 1] = (
+                    condensed_teams[i + 1],
+                    condensed_teams[i],
+                )
+
+    return condensed_teams
 
 
 # ------------------------------------------------------------------------------

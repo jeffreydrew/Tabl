@@ -10,7 +10,6 @@ def rank_teams(round_number=2):
     """
     for round 2: rankings are based on wins and pd
     """
-    rankings = {}
 
     conn = sqlite3.connect(PATH_DB)
     cursor = conn.cursor()
@@ -45,20 +44,7 @@ def rank_teams(round_number=2):
                     condensed_teams[i],
                 )
 
-    p_teams = []
-    d_teams = []
-    for team in condensed_teams:
-        if team[3] == "P":
-            p_teams.append(team)
-        else:
-            d_teams.append(team)
-
-    # put p teams into rankings with key 'P' + str(rank)
-    for i in range(len(p_teams)):
-        rankings["P" + str(i + 1)] = p_teams[i][0]
-        rankings["D" + str(i + 1)] = d_teams[i][0]
-
-    return rankings
+    return condensed_teams
 
 
 # ------------------------------------------------------------------------------------------------
@@ -119,68 +105,57 @@ def round_1_Pairings(teams: list[list[str]]):
 
 def round_2_Pairings():
     pairings = []
-    rankings = rank_teams(2)
+    rankings = {}
+    condensed_teams = rank_teams(2)
 
-    # for i in half the length of the rankings list:
+    p_teams = []
+    d_teams = []
+    for team in condensed_teams:
+        if team[3] == "P":
+            p_teams.append(team)
+        else:
+            d_teams.append(team)
+
+    # put p teams into rankings with key 'P' + str(rank)
+    for i in range(len(p_teams)):
+        rankings["P" + str(i + 1)] = p_teams[i][0]
+        rankings["D" + str(i + 1)] = d_teams[i][0]
+
+    # this is going to need a change to account for teams hitting each other before
     for i in range(1, len(rankings) // 2 + 1):
         pairings.append([rankings["P" + str(i)], rankings["D" + str(i)]])
 
     return pairings
 
 
-# print round 2 pairings
-print(round_2_Pairings())
+#print(round_2_Pairings())
 
 
-def round_3_Pairings(teams: list[list[str]]):
+def round_3_Pairings():
     pairings = []
-    ids = []
-    copy = {}
+    rankings = {}
 
-    for id, name in teams:
-        ids.append(id)
-        copy[id] = name
+    condensed_teams = rank_teams(3)
 
-    for i in range(len(teams) // 2):
-        team1 = random.choice(ids)
-        team2 = random.choice(ids)
-        while team1 == team2:
-            team2 = random.choice(ids)
-        # if they are from the same school:
-        # As per AMTA Tab manual page 16, teams from the same school cannot be paired. It they are, the second
-        # team is returned to the pool and a new team is drawn. If this is the last pairing, the second team
-        # is switched with the last drawn team.
-        if copy[team1][:-2] == copy[team2][:-2]:
-            # if not last pairing
-            if i != len(teams) // 2 - 1:
-                valid_ids = ids.copy()
-                valid_ids.remove(team1)
-                valid_ids.remove(team2)
-                team2 = random.choice(valid_ids)
-                valid_ids.clear()
-                pairings.append([team1, team2])
+    # for team in condensed_teams:
+    #     print(team[0])
 
-            # if last
-            else:
-                temp = pairings.pop(-1)
-                pulled_team = temp[1]
-                temp[1] = team2
-                pairings.append(temp)
-                pairings.append([team1, pulled_team])
+    for i in range(1, len(condensed_teams) + 1):
+        rankings["R" + str(i)] = condensed_teams[i - 1][0]
 
+    switch = False
+    for i in range(1, len(rankings) + 1, 2):
+        # this creates the snaking pattern for team rankings as outlined in AMTA TAB MANUAL page 18
+        if not switch:
+            pairings.append([rankings["R" + str(i)], rankings["R" + str(i + 1)]])
+            switch = not switch
         else:
-            pairings.append([team1, team2])
-        ids.remove(team1)
-        ids.remove(team2)
-
-    # write pairings to corresponding round pairing file
-    filename = "pairings/round3.csv"
-    with open(filename, "w") as f:
-        # write pairings
-        for pair in pairings:
-            f.write(pair[0] + ", " + pair[1] + "\n")
-
+            pairings.append([rankings["R" + str(i + 1)], rankings["R" + str(i)]])
+            switch = not switch
     return pairings
+
+
+#print(round_3_Pairings())
 
 
 def round_4_Pairings(teams: list[list[str]]):
@@ -234,8 +209,8 @@ def round_4_Pairings(teams: list[list[str]]):
     return pairings
 
 
-def round_4_Pairings_Nats(teams: list[list[str]]):
-    pass
+def round_4_Pairings_Nats():
+    return round_2_Pairings()
 
 
 def print_Pairings(pairings):
