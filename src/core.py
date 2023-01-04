@@ -1,7 +1,10 @@
 from update_records import *
+import time
 
 clear_table()
+clear_table("databases/individual_rankings.db")
 create_teams_table()
+create_individual_rankings_table()
 # ------------------------------------------------------------------------------
 #                                    Rounds
 # ------------------------------------------------------------------------------
@@ -21,7 +24,13 @@ def round(round, testing=False):
 # ------------------------------------------------------------------------------
 #                              Simulate Tournament
 # ------------------------------------------------------------------------------
+#start timer
+start = time.time()
+
 for i in range(1, rounds+1):
     round(i)
 
 get_winner()
+#end timer
+end = time.time()
+print("Time elapsed: " + str(end - start) + " seconds")

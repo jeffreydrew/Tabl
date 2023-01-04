@@ -1,7 +1,7 @@
 import sqlite3
 import os
-import sys
 import random
+import pandas as pd
 from pairing import *
 
 
@@ -10,7 +10,9 @@ from pairing import *
 # ------------------------------------------------------------------------------------------------
 
 PATH_DB = "databases/team_records.db"
+PATH_DB_COMPETITORS = "databases/individual_rankings.db"
 PATH_TEAMS = "teams.csv"
+PATH_COMPETITORS = "competitors.csv"
 PATH_TEST_DB = "tests/test_databases/test_team_records.db"
 
 
@@ -29,6 +31,13 @@ def read_teams(path=PATH_TEAMS):
     return teams
 
 
+def read_competitors(path=PATH_COMPETITORS):
+    # use pandas and create a dataframe of the competitors
+    df = pd.read_csv(path)
+    # return a list of only the names in the first column and ignore the first row
+    return df.iloc[1:, 0].tolist()
+
+
 def clear_table(path=PATH_DB):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
@@ -42,7 +51,7 @@ def create_teams_table(path=PATH_DB):
     cursor = conn.cursor()
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS team_records
-                    (team_number text, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text, Side_Needed text)"""
+                    (team_number text primary key, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text, Side_Needed text)"""
     )
 
     # fill id and name
@@ -57,7 +66,24 @@ def create_teams_table(path=PATH_DB):
     conn.close()
 
 
-# database will look like this
+def create_individual_rankings_table(path=PATH_DB_COMPETITORS):
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS individual_rankings
+                    (name text primary key, ranks integer)"""
+    )
+
+    # fill name and initial 0 ranks
+    names = read_competitors()
+    for name in names:
+        cursor.execute("""INSERT INTO individual_rankings VALUES (?, 0)""", (name,))
+
+    conn.commit()
+    conn.close()
+
+
+# team records database will look like this
 """
 +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
 | team_number | team_name            | Wins | Losses | CS | OCS | PD | R1 | R2 | R3 | R4 | Side_Needed |
@@ -78,6 +104,19 @@ def create_teams_table(path=PATH_DB):
 +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
 | 1600        | Mia University       | 0    | 0      | 0  | 0   | 0  | 0  | 0  | 0  | 0  | 0           |
 +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
+"""
+
+# individual rankings database will look like this
+"""
++-----------------+-------+
+| name            | ranks |
++=================+=======+
+| Kylie Ramaswami | 20    |
++-----------------+-------+
+| Ben Wallace     | 19    |
++-----------------+-------+
+| Deb Rothenberg  | 20    |
++-----------------+-------+
 """
 
 
@@ -105,8 +144,14 @@ def read_ballot(path):
     teams = ballot[0].split(",")
     # store rest of lines as scores list of tuples
     scores = []
-    for line in ballot[1:]:
+    for line in ballot[1:-4]:
         scores.append(line.split(","))
+
+    # store last 4 lines into ranks
+    ranks = []
+    for line in ballot[-4:]:
+        ranks.append(line.split(","))
+
     p_total = 0
     d_total = 0
     for score in scores:
@@ -116,11 +161,11 @@ def read_ballot(path):
     pd = abs(p_total - d_total)
     # return winning team and point differential
     if p_total > d_total:
-        return (teams[0], teams[1], pd)
+        return (teams[0], teams[1], pd, ranks)
     elif d_total > p_total:
-        return (teams[1], teams[0], pd)
+        return (teams[1], teams[0], pd, ranks)
     else:
-        return (teams[0], teams[1], 0)
+        return (teams[0], teams[1], 0, ranks)
 
 
 def get_round_updates(round_number: int):
@@ -361,14 +406,16 @@ def update_cs(path=PATH_DB):
             if row[i] != "0":
                 op = row[i]
                 cursor.execute(
-                    """SELECT * FROM team_records WHERE team_number = ?""", (op,)
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (op,),
                 )
                 op_row = cursor.fetchone()
                 cs += op_row[2]
 
         # update cs
         cursor.execute(
-            """UPDATE team_records SET CS = ? WHERE team_number = ?""", (cs, row[0])
+            """UPDATE team_records SET CS = ? WHERE team_number = ?""",
+            (cs, row[0]),
         )
     conn.commit()
     conn.close()
@@ -390,15 +437,44 @@ def update_ocs(path=PATH_DB):
             if row[i] != "0":
                 op = row[i]
                 cursor.execute(
-                    """SELECT * FROM team_records WHERE team_number = ?""", (op,)
+                    """SELECT * FROM team_records WHERE team_number = ?""",
+                    (op,),
                 )
                 op_row = cursor.fetchone()
                 ocs += op_row[4]
 
         # update ocs
         cursor.execute(
-            """UPDATE team_records SET ocs = ? WHERE team_number = ?""", (ocs, row[0])
+            """UPDATE team_records SET ocs = ? WHERE team_number = ?""",
+            (ocs, row[0]),
         )
+    conn.commit()
+    conn.close()
+
+
+def update_individual_rankings(path=PATH_COMPETITORS):
+    # connect to db
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+
+    for i in range(round, 0, -1):
+
+        updates = get_round_updates(i)
+        # go through each update
+        for update in updates:
+            # parse info
+            ranks = update[3]
+            for i in range(len(ranks)):
+                # add (5-i) to the value of i[0] in the individual_rankings.db
+                cursor.execute(
+                    """SELECT * FROM individual_rankings WHERE name = ?""",
+                    (ranks[i][0],),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """UPDATE individual_rankings SET rank = ? WHERE name = ?""",
+                    (row[1] + (5 - i), ranks[i][0]),
+                )
     conn.commit()
     conn.close()
 
@@ -418,6 +494,12 @@ def generate_ballot(teams: list, path: str):
         scores = []
         for i in range(14):
             scores.append((random.randint(5, 10), random.randint(5, 10)))
+
+        # names = get_names()
+        names = read_competitors()
+        # pick 8 random names from the list of names
+        names = random.sample(names, 8)
+
         # write to file
         filename = path + "/" + team1 + "_" + team2 + "_" + str(j) + ".csv"
         with open(filename, "w") as f:
@@ -426,6 +508,10 @@ def generate_ballot(teams: list, path: str):
             # write scores
             for score in scores:
                 f.write(str(score[0]) + "," + str(score[1]) + "\n")
+
+            # write to file pairs of names
+            for i in range(0, len(names), 2):
+                f.write(names[i] + "," + names[i + 1] + "\n")
 
 
 def generate_round_ballots(round_number):
@@ -480,10 +566,13 @@ def get_winner(path=PATH_DB):
                     condensed_teams[i + 1],
                     condensed_teams[i],
                 )
-            
-    #if two teams have the same cs, sort them by ocs
+
+    # if two teams have the same cs, sort them by ocs
     for i in range(len(condensed_teams) - 1):
-        if condensed_teams[i][1] == condensed_teams[i + 1][1] and condensed_teams[i][2] == condensed_teams[i + 1][2]:
+        if (
+            condensed_teams[i][1] == condensed_teams[i + 1][1]
+            and condensed_teams[i][2] == condensed_teams[i + 1][2]
+        ):
             if condensed_teams[i][3] < condensed_teams[i + 1][3]:
                 condensed_teams[i], condensed_teams[i + 1] = (
                     condensed_teams[i + 1],
@@ -492,7 +581,11 @@ def get_winner(path=PATH_DB):
 
     # if two teams have same ocs, sort them by pd
     for i in range(len(condensed_teams) - 1):
-        if condensed_teams[i][1] == condensed_teams[i + 1][1] and condensed_teams[i][2] == condensed_teams[i + 1][2] and condensed_teams[i][3] == condensed_teams[i + 1][3]:
+        if (
+            condensed_teams[i][1] == condensed_teams[i + 1][1]
+            and condensed_teams[i][2] == condensed_teams[i + 1][2]
+            and condensed_teams[i][3] == condensed_teams[i + 1][3]
+        ):
             if condensed_teams[i][4] < condensed_teams[i + 1][4]:
                 condensed_teams[i], condensed_teams[i + 1] = (
                     condensed_teams[i + 1],
@@ -511,12 +604,40 @@ def get_winner(path=PATH_DB):
                     condensed_teams[i],
                 )
 
-    #write the first 6 teams to a file called winners.txt
+    # write the first 6 teams to a file called winners.txt
     with open("winners.txt", "w") as f:
         for i in range(6):
             f.write(str(condensed_teams[i][0]) + "\n")
-            
 
+
+def get_individual_awards(path=PATH_DB_COMPETITORS):
+    #connect
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+
+    att_awards = []
+    
+
+    #get all competitors and put into pandas dataframe
+    cursor.execute("""SELECT * FROM competitors""")
+    rows = cursor.fetchall()
+    df = pd.DataFrame(rows, columns=['name', 'rank'])
+
+    #put all names with rank more than 16 into a list
+    sixteens = []
+    for index, row in df.iterrows():
+        if row['rank'] > 16:
+            sixteens.append(row)
+    
+    seventeens = []
+    for index, row in df.iterrows():
+        if row['rank'] > 17:
+            seventeens.append(row)
+    eighteens = []
+    for index, row in df.iterrows():
+        if row['rank'] > 18:
+            eighteens.append(row)
+    #if 10 or less in sixteens, 
 
 # ------------------------------------------------------------------------------
 #                               Misc/Testing Functions
