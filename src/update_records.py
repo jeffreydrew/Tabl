@@ -77,7 +77,7 @@ def create_individual_rankings_table(path=PATH_DB_COMPETITORS):
     # fill name and initial 0 ranks
     names = read_competitors()
     for name in names:
-        cursor.execute("""INSERT INTO individual_rankings VALUES (?, 0)""", (name,))
+        cursor.execute("""INSERT OR IGNORE INTO individual_rankings VALUES (?, 0)""", (name,))
 
     conn.commit()
     conn.close()
@@ -113,7 +113,7 @@ def create_individual_rankings_table(path=PATH_DB_COMPETITORS):
 +=================+=======+
 | Kylie Ramaswami | 20    |
 +-----------------+-------+
-| Ben Wallace     | 19    |
+| Ron Weasley     | 19    |
 +-----------------+-------+
 | Deb Rothenberg  | 20    |
 +-----------------+-------+
@@ -203,7 +203,7 @@ def update_opponents(pairings_path, round_number: int) -> None:
 
     # get pairings
     pairings = get_pairings(pairings_path)
-    print(pairings)
+    #print(pairings)
     """
     this should be based on the results from the pairings for a given round
     """
@@ -616,7 +616,7 @@ def get_individual_awards(path=PATH_DB_COMPETITORS):
     cursor = conn.cursor()
 
     att_awards = []
-    
+
 
     #get all competitors and put into pandas dataframe
     cursor.execute("""SELECT * FROM competitors""")
