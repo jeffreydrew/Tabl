@@ -1,17 +1,19 @@
 from update_records import *
 import time
 
-clear_table()
-# clear_table("databases/individual_rankings.db")
+# clear_table()
 create_teams_table()
-create_individual_rankings_table()
+create_att_rankings_table()
+create_wit_rankings_table()
+
+
 # ------------------------------------------------------------------------------
 #                                    Rounds
 # ------------------------------------------------------------------------------
 rounds = 4
 
 
-def round(round, testing=True):
+def round(round, testing=False):
     if testing:
         generate_round_ballots(round)
     pairings_path = "pairings/round" + str(round) + ".csv"
@@ -19,6 +21,8 @@ def round(round, testing=True):
     update_records(round)
     update_cs()
     update_ocs()
+    # individual stuff
+    update_individual_rankings(round)
 
 
 # ------------------------------------------------------------------------------

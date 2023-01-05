@@ -2,6 +2,7 @@ import sqlite3
 import os
 import random
 import pandas as pd
+from collections import Counter
 from pairing import *
 
 
@@ -9,10 +10,16 @@ from pairing import *
 #                                       Real Path Variables
 # ------------------------------------------------------------------------------------------------
 
-PATH_DB = "databases/team_records.db"
-PATH_DB_COMPETITORS = "databases/individual_rankings.db"
+# rosters
 PATH_TEAMS = "teams.csv"
 PATH_COMPETITORS = "competitors.csv"
+
+# databases
+PATH_DB = "databases/team_records.db"
+PATH_WIT = "databases/wit_ranks.db"
+PATH_ATT = "databases/att_ranks.db"
+
+# testing
 PATH_TEST_DB = "tests/test_databases/test_team_records.db"
 
 
@@ -51,14 +58,25 @@ def create_teams_table(path=PATH_DB):
     cursor = conn.cursor()
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS team_records
-                    (team_number text primary key, team_name text, Wins real, Losses real, CS real, OCS real, PD real, R1 text, R2 text, R3 text, R4 text, Side_Needed text)"""
+                    (team_number text primary key, 
+                    team_name text, 
+                    Wins real, 
+                    Losses real, 
+                    CS real, 
+                    OCS real, 
+                    PD real, 
+                    R1 text, 
+                    R2 text, 
+                    R3 text, 
+                    R4 text, 
+                    Side_Needed text)"""
     )
 
     # fill id and name
     teams = read_teams()
     for id, name in teams:
         cursor.execute(
-            """INSERT INTO team_records VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)""",
+            """INSERT OR IGNORE INTO team_records VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)""",
             (id, name),
         )
 
@@ -66,18 +84,37 @@ def create_teams_table(path=PATH_DB):
     conn.close()
 
 
-def create_individual_rankings_table(path=PATH_DB_COMPETITORS):
+def create_att_rankings_table(path=PATH_ATT):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute(
-        """CREATE TABLE IF NOT EXISTS individual_rankings
-                    (name text primary key, ranks integer)"""
+        """CREATE TABLE IF NOT EXISTS att_ranks
+                    (name text primary key, 
+                    ranks integer)"""
     )
 
     # fill name and initial 0 ranks
     names = read_competitors()
     for name in names:
-        cursor.execute("""INSERT OR IGNORE INTO individual_rankings VALUES (?, 0)""", (name,))
+        cursor.execute("""INSERT OR IGNORE INTO att_ranks VALUES (?, 0)""", (name,))
+
+    conn.commit()
+    conn.close()
+
+
+def create_wit_rankings_table(path=PATH_WIT):
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS wit_ranks
+                    (name text primary key, 
+                    ranks integer)"""
+    )
+
+    # fill name and initial 0 ranks
+    names = read_competitors()
+    for name in names:
+        cursor.execute("""INSERT OR IGNORE INTO wit_ranks VALUES (?, 0)""", (name,))
 
     conn.commit()
     conn.close()
@@ -106,7 +143,7 @@ def create_individual_rankings_table(path=PATH_DB_COMPETITORS):
 +-------------+----------------------+------+--------+----+-----+----+----+----+----+----+-------------+
 """
 
-# individual rankings database will look like this
+# individual rankings database will look like this, both wit and att
 """
 +-----------------+-------+
 | name            | ranks |
@@ -203,7 +240,7 @@ def update_opponents(pairings_path, round_number: int) -> None:
 
     # get pairings
     pairings = get_pairings(pairings_path)
-    #print(pairings)
+    # print(pairings)
     """
     this should be based on the results from the pairings for a given round
     """
@@ -452,31 +489,51 @@ def update_ocs(path=PATH_DB):
     conn.close()
 
 
-def update_individual_rankings(path=PATH_COMPETITORS):
-    # connect to db
-    conn = sqlite3.connect(path)
-    cursor = conn.cursor()
+def update_individual_rankings(round):
+
+    # connections to both databases
+    conn_att = sqlite3.connect(PATH_ATT)
+    cursor_att = conn_att.cursor()
+    # set all ranks column to 0
+    cursor_att.execute("""UPDATE att_ranks SET ranks = 0""")
+
+    conn_wit = sqlite3.connect(PATH_WIT)
+    cursor_wit = conn_wit.cursor()
+    # set all ranks column to 0
+    cursor_wit.execute("""UPDATE wit_ranks SET ranks = 0""")
 
     for i in range(round, 0, -1):
-
         updates = get_round_updates(i)
         # go through each update
         for update in updates:
             # parse info
             ranks = update[3]
             for i in range(len(ranks)):
-                # add (5-i) to the value of i[0] in the individual_rankings.db
-                cursor.execute(
-                    """SELECT * FROM individual_rankings WHERE name = ?""",
+                # att stuff first
+                # add (5-i) to the value of i[0] in the att_ranks.db
+                cursor_att.execute(
+                    """SELECT * FROM att_ranks WHERE name = ?""",
                     (ranks[i][0],),
                 )
-                row = cursor.fetchone()
-                cursor.execute(
-                    """UPDATE individual_rankings SET rank = ? WHERE name = ?""",
+                row = cursor_att.fetchone()
+                cursor_att.execute(
+                    """UPDATE att_ranks SET ranks = ? WHERE name = ?""",
                     (row[1] + (5 - i), ranks[i][0]),
                 )
-    conn.commit()
-    conn.close()
+                cursor_wit.execute(
+                    """SELECT * FROM wit_ranks WHERE name = ?""",
+                    (ranks[i][1],),
+                )
+                row = cursor_wit.fetchone()
+                cursor_wit.execute(
+                    """UPDATE wit_ranks SET ranks = ? WHERE name = ?""",
+                    (row[1] + (5 - i), ranks[i][1]),
+                )
+    conn_att.commit()
+    conn_wit.commit()
+
+    conn_att.close()
+    conn_wit.close()
 
 
 # ------------------------------------------------------------------------------------------------
@@ -610,34 +667,63 @@ def get_winner(path=PATH_DB):
             f.write(str(condensed_teams[i][0]) + "\n")
 
 
-def get_individual_awards(path=PATH_DB_COMPETITORS):
-    #connect
+def get_att_awards(path=PATH_ATT):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
 
-    att_awards = []
-
-
-    #get all competitors and put into pandas dataframe
-    cursor.execute("""SELECT * FROM competitors""")
+    # get database and put into pandas dataframe
+    cursor.execute("""SELECT * FROM att_ranks""")
     rows = cursor.fetchall()
-    df = pd.DataFrame(rows, columns=['name', 'rank'])
+    df = pd.DataFrame(rows)
 
-    #put all names with rank more than 16 into a list
-    sixteens = []
-    for index, row in df.iterrows():
-        if row['rank'] > 16:
-            sixteens.append(row)
-    
-    seventeens = []
-    for index, row in df.iterrows():
-        if row['rank'] > 17:
-            seventeens.append(row)
-    eighteens = []
-    for index, row in df.iterrows():
-        if row['rank'] > 18:
-            eighteens.append(row)
-    #if 10 or less in sixteens, 
+    # sort the dataframe in place by highest rank first
+    df.sort_values(by=[1], inplace=True, ascending=False)
+
+    # find the 10th highest ranked name
+    tenth_rank = df.iloc[9, 1]
+
+    if tenth_rank < 16:
+        # write all names and ranks of at least 16 to a file called att_awards.txt
+        with open("individual_awards/att_awards.txt", "w") as f:
+            for i in range(len(df)):
+                if df.iloc[i, 1] >= 16:
+                    f.write(str(df.iloc[i, 0]) + ": " + str(df.iloc[i, 1]) + "\n")
+    else:
+        # write all names and ranks of at least tenth_rank to a file called att_awards.txt
+        with open("individual_awards/att_awards.txt", "w") as f:
+            for i in range(len(df)):
+                if df.iloc[i, 1] >= tenth_rank:
+                    f.write(str(df.iloc[i, 0]) + ": " + str(df.iloc[i, 1]) + "\n")
+
+
+def get_wit_awards(path=PATH_WIT):
+    # same as get_att_awards but for wit
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM wit_ranks""")
+    rows = cursor.fetchall()
+    df = pd.DataFrame(rows)
+    df.sort_values(by=[1], inplace=True, ascending=False)
+    tenth_rank = df.iloc[9, 1]
+    if tenth_rank < 16:
+        with open("individual_awards/wit_awards.txt", "w") as f:
+            for i in range(len(df)):
+                if df.iloc[i, 1] >= 16:
+                    f.write(str(df.iloc[i, 0]) + ": " + str(df.iloc[i, 1]) + "\n")
+    else:
+        with open("individual_awards/wit_awards.txt", "w") as f:
+            for i in range(len(df)):
+                if df.iloc[i, 1] >= tenth_rank:
+                    f.write(str(df.iloc[i, 0]) + ": " + str(df.iloc[i, 1]) + "\n")
+
+
+def get_individual_awards():
+    get_att_awards()
+    get_wit_awards()
+
+
+get_individual_awards()
+
 
 # ------------------------------------------------------------------------------
 #                               Misc/Testing Functions
