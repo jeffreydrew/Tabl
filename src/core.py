@@ -1,7 +1,7 @@
 from update_records import *
 import time
 
-# clear_table()
+clear_all_tables()
 create_teams_table()
 create_att_rankings_table()
 create_wit_rankings_table()

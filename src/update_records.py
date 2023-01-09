@@ -10,6 +10,7 @@ from pairing import *
 #                                       Real Path Variables
 # ------------------------------------------------------------------------------------------------
 
+
 # rosters
 PATH_TEAMS = "teams.csv"
 PATH_COMPETITORS = "competitors.csv"
@@ -45,13 +46,32 @@ def read_competitors(path=PATH_COMPETITORS):
     return df.iloc[1:, 0].tolist()
 
 
-def clear_table(path=PATH_DB):
+def clear_team_table(path=PATH_DB):
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
     cursor.execute("""DELETE FROM team_records""")
     conn.commit()
     conn.close()
 
+def clear_att_table(path=PATH_ATT):
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute("""DELETE FROM att_ranks""")
+    conn.commit()
+    conn.close()
+
+def clear_wit_table(path=PATH_WIT):
+    conn = sqlite3.connect(path)
+    cursor = conn.cursor()
+    cursor.execute("""DELETE FROM wit_ranks""")
+    conn.commit()
+    conn.close()
+
+#clear all tables
+def clear_all_tables():
+    clear_team_table()
+    clear_att_table()
+    clear_wit_table()
 
 def create_teams_table(path=PATH_DB):
     conn = sqlite3.connect(path)
