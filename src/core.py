@@ -28,13 +28,16 @@ def round(round, testing=False):
 # ------------------------------------------------------------------------------
 #                              Simulate Tournament
 # ------------------------------------------------------------------------------
+print("Simulating UF Charity Tournament 2023...")
 # start timer
 start = time.time()
 
 for i in range(1, rounds + 1):
+    print("Processing ballots for round " + str(i) + "...")
     round(i)
+    print("Round " + str(i) + " tabulation complete.")
 
 get_winner()
 # end timer
 end = time.time()
-print("Time elapsed: " + str(end - start) + " seconds")
+print("Total tabulation time: " + str(end - start) + " seconds")
